@@ -141,7 +141,7 @@
 
         const config = {
             acolhimento: { salas: ["Mesa Acolhimento"], tipo: 'acolhimento' },
-            recepcao: { salas: ["Recepção 01", "Recepção 02"], tipo: 'botoes' },
+            recepcao: { salas: ["Recepção 01", "Recepção 02"], tipo: 'misto' }, // Alterado para 'misto' (botões + nome)
             medico: { salas: ["Consultório 02", "Consultório 04", "Consultório 05", "Consultório 06", "Consultório 07"], tipo: 'nome' },
             enfermagem: { salas: ["Consultório 01", "Consultório 03", "Classificação de Risco", "Vacina", "Procedimentos", "Sala de Coleta", "Sala de Curativo"], tipo: 'nome' },
             odonto: { salas: ["Odontologia"], tipo: 'nome' },
@@ -194,7 +194,10 @@
             const salaAtual = document.getElementById('minhaSala').value;
             document.getElementById('interfaceAcolhimento').style.display = (cat === 'acolhimento') ? 'block' : 'none';
             document.getElementById('interfaceRecepcao').style.display = (cat === 'recepcao') ? 'block' : 'none';
-            document.getElementById('interfaceNome').style.display = (config[cat].tipo === 'nome') ? 'block' : 'none';
+            
+            // Agora exibe o campo de nome tanto se o tipo for 'nome' quanto se for 'misto' (Recepção)
+            document.getElementById('interfaceNome').style.display = (config[cat].tipo === 'nome' || config[cat].tipo === 'misto') ? 'block' : 'none';
+            
             document.getElementById('interfaceAvisos').style.display = (cat === 'gerencia') ? 'block' : 'none';
             document.getElementById('interfaceColeta').style.display = (salaAtual === "Sala de Coleta") ? 'block' : 'none';
             document.getElementById('selecaoSala').style.display = (cat === 'acolhimento') ? 'none' : 'block';
