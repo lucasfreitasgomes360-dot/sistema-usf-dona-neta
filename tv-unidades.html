@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>TV - USF Cristo Redentor</title>
+    <title>TV - USF Dona Neta</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <style>
@@ -16,7 +16,7 @@
         .data-extenso { font-size: 1.1rem; color: #ccc; text-transform: capitalize; margin-top: 5px; }
         .conteudo-principal { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; position: relative; }
         #area-chamada { display: none; }
-        .paciente { font-size: 8rem; font-weight: bold; color: #ffcc00; text-transform: uppercase; padding: 0 20px; text-shadow: 4px 4px 10px rgba(0,0,0,0.5); }
+        .paciente { font-size: 7.5rem; font-weight: bold; color: #ffcc00; text-transform: uppercase; padding: 0 20px; text-shadow: 4px 4px 10px rgba(0,0,0,0.5); line-height: 1.1; }
         .sala { font-size: 5rem; background: white; color: #002b5c; padding: 10px 60px; border-radius: 20px; display: inline-block; margin-top: 25px; font-weight: bold; border: 4px solid #ffcc00; }
         #painel-informativo { display: block; padding: 20px; }
         .card-info { background: white; color: #333; border-radius: 25px; padding: 45px; max-width: 85%; margin: 0 auto; border-left: 25px solid #007bff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -33,7 +33,7 @@
 <body id="corpo-tv">
     <div class="assinatura-tv">
         Desenvolvido por <b>Lucas Freitas Gomes</b> &copy; 2026<br>
-        USF Cristo Redentor
+        USF Dona Neta
     </div>
 
     <div id="aviso-inicial" onclick="this.style.display='none'; som.play().catch(()=>{});" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:999; display:flex; flex-direction:column; justify-content:center; align-items:center; cursor:pointer;">
@@ -43,8 +43,8 @@
 
     <div class="topo">
         <div class="unidade-nome">
-            <h1>USF Cristo Redentor</h1>
-            <p>Dr. Carlos Alberto Jurgielewicz</p>
+            <h1>USF Dona Neta</h1>
+            <p>Eng. Arthur Hokama</p>
         </div>
         <div class="area-relogio">
             <div id="relogio" class="relogio">00:00:00</div>
@@ -78,7 +78,6 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
-        // --- CORREÇÕES E VARIÁVEIS GLOBAIS ---
         const som = new Audio('https://assets.mixkit.co/active_storage/sfx/2861/2861-preview.mp3');
         let histTv = [];
         let listaAvisos = [];
@@ -87,21 +86,42 @@
         let processandoChamada = false;
         let filaDeEspera = [];
 
-        // Escuta novas chamadas do Firebase
+        // Função para formatar o nome aplicando as diretrizes da LGPD na tela
+        function aplicarLGPD(nomeOriginal) {
+            let nomeLimpo = nomeOriginal.replace("COLABORADOR: ", "").trim();
+            
+            // Se for uma senha numérica comum, retorna o texto original
+            if (nomeOriginal.toUpperCase().includes("SENHA")) {
+                return nomeLimpo;
+            }
+
+            let partes = nomeLimpo.split(/\s+/);
+            if (partes.length <= 2) {
+                return nomeLimpo; // Se só tiver nome e um sobrenome, deixa normal
+            }
+
+            // Mantém o primeiro nome, abrevia os do meio, e mantém o último sobrenome
+            let primeiroNome = partes[0];
+            let ultimoSobrenome = partes[partes.length - 1];
+            let doMeio = partes.slice(1, partes.length - 1)
+                               .map(p => p.length > 2 ? p[0] + "." : p) // Ignora preposições curtas como "da", "de"
+                               .join(" ");
+
+            return `${primeiroNome} ${doMeio} ${ultimoSobrenome}`;
+        }
+
         database.ref('fila_chamadas').on('child_added', (snap) => {
             const dados = snap.val();
             database.ref('fila_chamadas/' + snap.key).remove();
             chamar(dados);
         });
 
-        // Escuta os avisos para o carrossel
         database.ref('avisos_unidade').on('value', snap => {
             listaAvisos = []; 
             snap.forEach(child => { listaAvisos.push(child.val()); });
             if (!processandoChamada) iniciarCarrossel();
         });
 
-        // Adiciona chamada na fila
         function chamar(dados) {
             filaDeEspera.push(dados);
             if (!processandoChamada) iniciarFila();
@@ -120,11 +140,14 @@
             clearInterval(intervaloCarrossel);
 
             const atual = filaDeEspera.shift();
-            let msgExibida = atual.msg.replace("COLABORADOR: ", "");
+            
+            // LGPD: O texto que vai para a tela é tratado, mas a voz lê o nome completo!
+            let msgExibidaNaTela = aplicarLGPD(atual.msg);
+            let msgLimpaSemFiltro = atual.msg.replace("COLABORADOR: ", "");
             
             document.getElementById('area-chamada').style.display = 'block';
             document.getElementById('painel-informativo').style.display = 'none';
-            document.getElementById('txtPaciente').innerText = msgExibida;
+            document.getElementById('txtPaciente').innerText = msgExibidaNaTela;
             document.getElementById('txtSala').innerText = atual.local;
             
             document.body.classList.remove('piscar-alerta'); 
@@ -132,15 +155,15 @@
             document.body.classList.add('piscar-alerta');
             
             som.play().catch(e => console.log("Erro som:", e));
-            atualizarHistTV(msgExibida, atual.local);
+            atualizarHistTV(msgExibidaNaTela, atual.local);
             
-            await falarTexto(atual.msg, atual.local);
+            // O áudio (Sintese de Voz) continua chamando pelo nome completo para o paciente reconhecer
+            await falarTexto(msgLimpaSemFiltro, atual.local, atual.msg.toUpperCase().includes("COLABORADOR:"));
             
-            // Tempo de exibição na tela antes de chamar o próximo ou voltar carrossel
             setTimeout(iniciarFila, 5000);
         }
 
-        function falarTexto(nome, local) {
+        function falarTexto(nome, local, ehColaborador) {
             return new Promise((resolve) => {
                 window.speechSynthesis.cancel();
                 
@@ -156,9 +179,8 @@
 
                 if (nomeUpper.includes("SENHA")) {
                     textoFinal = `Atenção. ${textoParaFalar}. Dirija-se ${prep} ${local}`;
-                } else if (nomeUpper.includes("COLABORADOR:")) {
-                    let nomeLimpo = textoParaFalar.replace(/COLABORADOR: /gi, "");
-                    textoFinal = `Atenção. Colaborador ${nomeLimpo}. Dirija-se ${prep} ${local}`;
+                } else if (ehColaborador) {
+                    textoFinal = `Atenção. Colaborador ${textoParaFalar}. Dirija-se ${prep} ${local}`;
                 } else {
                     textoFinal = `Atenção. Paciente ${textoParaFalar}. Dirija-se ${prep} ${local}`;
                 }
@@ -170,7 +192,6 @@
                 fala.onerror = () => resolve();
                 
                 window.speechSynthesis.speak(fala);
-                // Fallback caso a voz falhe
                 setTimeout(resolve, 8000);
             });
         }
@@ -178,7 +199,7 @@
         function iniciarCarrossel() {
             clearInterval(intervaloCarrossel);
             if (listaAvisos.length === 0) { 
-                document.getElementById('texto-info').innerText = "USF Cristo Redentor - Dr. Carlos Alberto Jurgielewicz"; 
+                document.getElementById('texto-info').innerText = "USF Dona Neta - Eng. Arthur Hokama"; 
                 return; 
             }
             rodarFrase(); 
@@ -217,7 +238,6 @@
             });
         }
 
-        // Relógio
         setInterval(() => { 
             const agora = new Date();
             document.getElementById('relogio').innerText = agora.toLocaleTimeString('pt-BR');
