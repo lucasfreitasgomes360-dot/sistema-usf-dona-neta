@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Chamador - USF Cristo Redentor</title>
+    <title>Chamador - USF Dona Neta</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <style>
@@ -39,8 +39,8 @@
     <div id="toast">Operação realizada!</div>
     <div class="container">
         <div class="header-unidade">
-            <h2>USF CRISTO REDENTOR</h2>
-            <p>Dr. Carlos Alberto Jurgielewicz</p>
+            <h2>USF DONA NETA</h2>
+            <p>Eng. Arthur Hokama</p>
         </div>
         
         <div class="card-setor">
@@ -121,7 +121,7 @@
 
     <div class="footer-creditos">
         Desenvolvido por <b>Lucas Freitas Gomes</b> &copy; 2026<br>
-        USF Cristo Redentor
+        USF Dona Neta
     </div>
 
     <script>
@@ -141,14 +141,30 @@
 
         const config = {
             acolhimento: { salas: ["Mesa Acolhimento"], tipo: 'acolhimento' },
-            recepcao: { salas: ["Recepção 01", "Recepção 02", "Recepção 03"], tipo: 'botoes' },
-            medico: { salas: ["Consultório 01", "Consultório 02", "Consultório 03", "Consultório 04"], tipo: 'nome' },
-            enfermagem: { salas: ["Classificação de Risco", "Vacina", "Procedimentos", "Sala de Coleta", "Sala de Curativo"], tipo: 'nome' },
+            recepcao: { salas: ["Recepção 01", "Recepção 02"], tipo: 'botoes' },
+            medico: { salas: ["Consultório 02", "Consultório 04", "Consultório 05", "Consultório 06", "Consultório 07"], tipo: 'nome' },
+            enfermagem: { salas: ["Consultório 01", "Consultório 03", "Classificação de Risco", "Vacina", "Procedimentos", "Sala de Coleta", "Sala de Curativo"], tipo: 'nome' },
             odonto: { salas: ["Odontologia"], tipo: 'nome' },
             auditorio: { salas: ["Auditório"], tipo: 'nome' },
-            servico_social: { salas: ["Serviço Social"], tipo: 'nome' },
+            servico_social: { salas: ["Inalação"], tipo: 'nome' },
             gerencia: { salas: ["Gerência"], tipo: 'nome' }
         };
+
+        function aplicarLGPD(textoOriginal) {
+            let nomeLimpo = textoOriginal.replace("COLABORADOR: ", "").trim();
+            if (textoOriginal.toUpperCase().includes("SENHA")) return nomeLimpo;
+
+            let partes = nomeLimpo.split(/\s+/);
+            if (partes.length <= 2) return nomeLimpo;
+
+            let primeiroNome = partes[0];
+            let ultimoSobrenome = partes[partes.length - 1];
+            let doMeio = partes.slice(1, partes.length - 1)
+                               .map(p => p.length > 2 ? p[0] + "." : p)
+                               .join(" ");
+
+            return `${primeiroNome} ${doMeio} ${ultimoSobrenome}`;
+        }
 
         function mostrarToast(msg) { const t = document.getElementById("toast"); t.innerText = msg; t.className = "show"; setTimeout(() => { t.className = ""; }, 3000); }
 
@@ -191,25 +207,30 @@
 
         function gerarSenha(key, prefixo) {
             database.ref('contador/' + key).transaction(v => (v || 0) + 1, (err, comm, snap) => {
-                if (comm) { enviarParaFirebase(`${prefixo} ${String(snap.val()).padStart(2, '0')}`); mostrarToast("Enviado!"); }
+                if (comm) { enviarParaFirebase(`${prefixo} ${String(snap.val()).padStart(2, '0')}`, `${prefixo} ${String(snap.val()).padStart(2, '0')}`); mostrarToast("Enviado!"); }
             });
         }
 
         function enviarChamadaNome() {
             const input = document.getElementById('nomePaciente');
             const cat = document.getElementById('categoria').value;
-            let texto = input.value.trim();
-            if(texto !== "") { 
-                if(cat === 'gerencia') { texto = "COLABORADOR: " + texto; }
-                enviarParaFirebase(texto); input.value = ""; mostrarToast("Enviado!"); 
+            let textoOriginal = input.value.trim();
+            if(textoOriginal !== "") { 
+                let textoFirebase = textoOriginal;
+                if(cat === 'gerencia') { textoFirebase = "COLABORADOR: " + textoOriginal; }
+                enviarParaFirebase(textoFirebase, textoOriginal); input.value = ""; mostrarToast("Enviado!"); 
             }
         }
 
-        function enviarParaFirebase(texto) {
+        function enviarParaFirebase(textoFirebase, textoOriginal) {
             const sala = document.getElementById('minhaSala').value;
-            database.ref('fila_chamadas').push({ msg: texto, local: sala, hora: Date.now() });
+            database.ref('fila_chamadas').push({ msg: textoFirebase, local: sala, hora: Date.now() });
+            
             if (!historicosPorSala[sala]) historicosPorSala[sala] = [];
-            historicosPorSala[sala].unshift({ texto: texto, hora: new Date().toLocaleTimeString() });
+            
+            // Salva no histórico local já formatado com a LGPD
+            let textoFormatado = aplicarLGPD(textoOriginal);
+            historicosPorSala[sala].unshift({ textoOriginal: textoFirebase, textoExibido: textoFormatado, hora: new Date().toLocaleTimeString() });
             if(historicosPorSala[sala].length > 5) historicosPorSala[sala].pop();
             renderizarHistorico();
         }
@@ -221,7 +242,7 @@
             document.getElementById('nomeSalaHistorico').innerText = sala;
             if (historicosPorSala[sala]) {
                 historicosPorSala[sala].forEach(item => {
-                    lista.innerHTML += `<div class="hist-item"><div><b>${item.texto}</b> <small>(${item.hora})</small></div><button class="btn-rechamada" onclick="enviarParaFirebase('${item.texto}')">RECHAMAR</button></div>`;
+                    lista.innerHTML += `<div class="hist-item"><div><b>${item.textoExibido}</b> <small>(${item.hora})</small></div><button class="btn-rechamada" onclick="enviarParaFirebase('${item.textoOriginal}', '${item.textoOriginal}')">RECHAMAR</button></div>`;
                 });
             }
         }
