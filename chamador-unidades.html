@@ -288,7 +288,7 @@
         }
         function prepararEdicao(key, msg, cor) { document.getElementById('inputAvisoUnidade').value = msg; document.getElementById('corAviso').value = cor; document.getElementById('editAvisoKey').value = key; document.getElementById('btnSalvarAviso').innerText = "💾 SALVAR ALTERAÇÃO"; }
         function excluirAviso(key) { if(confirm("Excluir?")) database.ref('avisos_unidade/'+key).remove(); }
-        function resetContadores() { if(confirm("Zerar?")) { const pass = prompt("Senha:"); if(btoa(pass) === "YWVyb3JhbmNob2l2") { database.ref('contador').set({ NORMAL: 0, PREFERENCIAL: 0, COLETA: 0, ODONTO: 0 }); database.ref('acolhimento').set({ normal: 0, pref: 0, coleta: 0, odonto: 0 }); mostrarToast("Resetado!"); } } }
+        function resetContadores() { if(confirm("Zerar?")) { const pass = prompt("Senha:"); if(btoa(pass) === "dXNmZG9uYW5ldGE=") { database.ref('contador').set({ NORMAL: 0, PREFERENCIAL: 0, COLETA: 0, ODONTO: 0 }); database.ref('acolhimento').set({ normal: 0, pref: 0, coleta: 0, odonto: 0 }); mostrarToast("Resetado!"); } } }
     </script>
 </body>
 </html>
